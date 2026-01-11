@@ -1,22 +1,26 @@
-"""Simple seed script to run inside the container."""
+"""Seed script - only seeds if database is empty."""
 import asyncio
+import sys
 from app.core.database import engine
 from app.core.security import get_password_hash
 from app.models.user import User, UserRole
 from app.models.project import Project, ProjectStatus, ProjectPriority
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy import text
+from sqlalchemy import text, select, func
 
 async def seed():
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
     async with async_session() as session:
-        # Clear existing data
-        await session.execute(text("DELETE FROM audit_logs"))
-        await session.execute(text("DELETE FROM projects"))
-        await session.execute(text("DELETE FROM users"))
-        await session.commit()
-        print("Cleared existing data")
+        # Check if users already exist
+        result = await session.execute(select(func.count(User.id)))
+        user_count = result.scalar_one()
+        
+        if user_count > 0:
+            print(f"Database already has {user_count} users. Skipping seed.")
+            return
+        
+        print("Database is empty. Seeding...")
         
         # Create users with proper password hashes
         admin = User(
@@ -79,11 +83,11 @@ async def seed():
         await session.commit()
         print("Created 3 projects")
         
-    print("\n✅ Database seeded successfully!")
-    print("\nLogin credentials:")
-    print("  admin@example.com / admin123")
-    print("  manager@example.com / manager123")
-    print("  viewer@example.com / viewer123")
+        print("\n✅ Database seeded successfully!")
+        print("\nLogin credentials:")
+        print("  admin@example.com / admin123")
+        print("  manager@example.com / manager123")
+        print("  viewer@example.com / viewer123")
 
 if __name__ == "__main__":
     asyncio.run(seed())
