@@ -12,9 +12,13 @@ from app.models import *  # noqa: Import all models for metadata
 config = context.config
 
 # Set sqlalchemy.url from settings (convert async URL to sync)
-sync_url = settings.DATABASE_URL.replace("+asyncpg", "").replace("postgresql://", "postgresql+psycopg2://")
-if not sync_url.startswith("postgresql+psycopg2://"):
+sync_url = settings.DATABASE_URL.replace("+asyncpg", "")
+# Convert to psycopg2 driver
+if "postgresql+psycopg2://" not in sync_url:
     sync_url = sync_url.replace("postgresql://", "postgresql+psycopg2://")
+# Convert SSL parameter: asyncpg uses 'ssl=require', psycopg2 uses 'sslmode=require'
+sync_url = sync_url.replace("?ssl=require", "?sslmode=require")
+sync_url = sync_url.replace("&ssl=require", "&sslmode=require")
 config.set_main_option("sqlalchemy.url", sync_url)
 
 # Interpret the config file for Python logging
