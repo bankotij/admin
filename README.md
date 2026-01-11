@@ -2,6 +2,46 @@
 
 A production-ready admin panel with FastAPI backend and React frontend. Built for speed, security, and developer experience.
 
+## 🌐 Live Demo
+
+| Service | URL |
+|---------|-----|
+| **Frontend** | [https://admin-web-416a.onrender.com](https://admin-web-416a.onrender.com) |
+| **Backend API** | [https://admin-eu43.onrender.com](https://admin-eu43.onrender.com) |
+| **API Docs** | [https://admin-eu43.onrender.com/api/v1/docs](https://admin-eu43.onrender.com/api/v1/docs) |
+
+### Demo Credentials
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Admin** | admin@example.com | admin123 |
+| **Manager** | manager@example.com | manager123 |
+| **Viewer** | viewer@example.com | viewer123 |
+
+---
+
+## 📸 Screenshots
+
+### Login Page
+![Login Page](screenshots/login.png)
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Projects Management
+![Projects](screenshots/projects.png)
+
+### Users Management
+![Users](screenshots/users.png)
+
+### Audit Logs
+![Audit Logs](screenshots/audit-logs.png)
+
+### Dark Mode
+![Dark Mode](screenshots/dark-mode.png)
+
+---
+
 ## Architecture
 
 ```
@@ -134,14 +174,6 @@ npm run dev
 ```
 
 Open http://localhost:5173 in your browser.
-
-## Demo Credentials
-
-| Role    | Email               | Password    |
-|---------|---------------------|-------------|
-| Admin   | admin@example.com   | admin123    |
-| Manager | manager@example.com | manager123  |
-| Viewer  | viewer@example.com  | viewer123   |
 
 ## API Documentation
 
