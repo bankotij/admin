@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserCheck, UserX } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserCheck, UserX, Users as UsersIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -27,9 +27,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { api } from '@/lib/api'
 import type { User, PaginatedResponse, UserRole, UserFilters } from '@/lib/types'
-import { formatDate, capitalize } from '@/lib/utils'
+import { formatDate, capitalize, cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { UserModal } from '@/components/users/user-modal'
@@ -38,6 +39,12 @@ const roleColors: Record<UserRole, 'default' | 'secondary' | 'outline'> = {
   admin: 'default',
   manager: 'secondary',
   viewer: 'outline',
+}
+
+const roleGradients: Record<UserRole, string> = {
+  admin: 'from-primary to-primary/70',
+  manager: 'from-blue-500 to-blue-600',
+  viewer: 'from-emerald-500 to-green-600',
 }
 
 export function UsersPage() {
@@ -53,6 +60,10 @@ export function UsersPage() {
   })
   const [modalOpen, setModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', filters],
@@ -64,7 +75,9 @@ export function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
-      toast({ title: 'User deleted', variant: 'success' })
+      toast({ title: 'User deleted successfully', variant: 'success' })
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
     },
     onError: (error: any) => {
       toast({
@@ -97,33 +110,49 @@ export function UsersPage() {
     setModalOpen(true)
   }
 
+  const handleDeleteClick = (user: User) => {
+    setUserToDelete(user)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (userToDelete) {
+      deleteMutation.mutate(userToDelete.id)
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage user accounts and permissions
-          </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in-down">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-glow">
+            <UsersIcon className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+            <p className="text-muted-foreground">
+              Manage user accounts and permissions
+            </p>
+          </div>
         </div>
         {isAdmin && (
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={handleCreate} className="gap-2 animate-fade-in-right">
+            <Plus className="h-4 w-4" />
             New User
           </Button>
         )}
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="animate-fade-in-up opacity-0" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="Search users..."
-                className="pl-9"
+                className="pl-10"
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
               />
@@ -138,7 +167,7 @@ export function UsersPage() {
                 })
               }
             >
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full sm:w-44">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
               <SelectContent>
@@ -153,11 +182,11 @@ export function UsersPage() {
       </Card>
 
       {/* Table */}
-      <Card>
+      <Card className="animate-fade-in-up opacity-0" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
@@ -179,21 +208,34 @@ export function UsersPage() {
                 ))
               ) : data?.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8">
-                    <p className="text-muted-foreground">No users found</p>
+                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-12">
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-muted mb-4">
+                        <UsersIcon className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground">No users found</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.items.map((user) => (
-                  <TableRow key={user.id}>
+                data?.items.map((user, idx) => (
+                  <TableRow 
+                    key={user.id}
+                    className="animate-fade-in-left opacity-0 group"
+                    style={{ animationDelay: `${0.3 + idx * 0.03}s`, animationFillMode: 'forwards' }}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                        <div className={cn(
+                          "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-lg",
+                          "bg-gradient-to-br transition-transform duration-200 group-hover:scale-105",
+                          roleGradients[user.role]
+                        )}>
                           {user.full_name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium">{user.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="font-semibold">{user.full_name}</p>
+                          <p className="text-sm text-muted-foreground font-mono">{user.email}</p>
                         </div>
                       </div>
                     </TableCell>
@@ -204,24 +246,30 @@ export function UsersPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.is_active ? 'success' : 'destructive'}>
+                        <span className={cn(
+                          "w-1.5 h-1.5 rounded-full mr-1.5",
+                          user.is_active ? "bg-success animate-pulse" : "bg-destructive"
+                        )} />
                         {user.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-sm">
                       {user.last_login ? formatDate(user.last_login) : 'Never'}
                     </TableCell>
-                    <TableCell>{formatDate(user.created_at)}</TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-sm">
+                      {formatDate(user.created_at)}
+                    </TableCell>
                     {isAdmin && (
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(user)}>
-                              <Pencil className="mr-2 h-4 w-4" />
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleEdit(user)} className="gap-2">
+                              <Pencil className="h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -231,29 +279,26 @@ export function UsersPage() {
                                   is_active: !user.is_active,
                                 })
                               }
+                              className="gap-2"
                             >
                               {user.is_active ? (
                                 <>
-                                  <UserX className="mr-2 h-4 w-4" />
+                                  <UserX className="h-4 w-4" />
                                   Deactivate
                                 </>
                               ) : (
                                 <>
-                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  <UserCheck className="h-4 w-4" />
                                   Activate
                                 </>
                               )}
                             </DropdownMenuItem>
                             {user.id !== currentUser?.id && (
                               <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => {
-                                  if (confirm('Delete this user?')) {
-                                    deleteMutation.mutate(user.id)
-                                  }
-                                }}
+                                className="text-destructive gap-2"
+                                onClick={() => handleDeleteClick(user)}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <Trash2 className="h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
                             )}
@@ -271,10 +316,14 @@ export function UsersPage() {
 
       {/* Pagination */}
       {data && data.pages > 1 && (
-        <div className="flex items-center justify-between">
+        <div 
+          className="flex items-center justify-between animate-fade-in-up opacity-0"
+          style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}
+        >
           <p className="text-sm text-muted-foreground">
-            Showing {(filters.page! - 1) * filters.page_size! + 1} to{' '}
-            {Math.min(filters.page! * filters.page_size!, data.total)} of {data.total}
+            Showing <span className="font-medium text-foreground">{(filters.page! - 1) * filters.page_size! + 1}</span> to{' '}
+            <span className="font-medium text-foreground">{Math.min(filters.page! * filters.page_size!, data.total)}</span> of{' '}
+            <span className="font-medium text-foreground">{data.total}</span>
           </p>
           <div className="flex gap-2">
             <Button
@@ -297,11 +346,23 @@ export function UsersPage() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* User Modal */}
       <UserModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         user={editingUser}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete User"
+        description={`Are you sure you want to delete "${userToDelete?.full_name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   )

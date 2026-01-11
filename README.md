@@ -95,9 +95,12 @@ A production-ready admin panel with FastAPI backend and React frontend. Built fo
 - **TailwindCSS + shadcn/ui** for beautiful, accessible components
 - **React Query** for server state management with caching
 - **React Router** for client-side routing
-- **Dark mode** support
+- **Dark mode** support with system preference detection
 - **Responsive** design (mobile + desktop)
 - **Optimistic updates** for better UX
+- **Modern UI** with glassmorphism effects and smooth animations
+- **Custom confirmation dialogs** for destructive actions
+- **Enhanced forms** with live previews, password strength indicators, and visual selectors
 
 ## Quick Start
 
@@ -113,23 +116,17 @@ A production-ready admin panel with FastAPI backend and React frontend. Built fo
 git clone <repo-url> admin_panel
 cd admin_panel
 
+# Create .env file with your database URL
+echo "DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname?ssl=require" > .env
+
 # Start all services
 docker-compose up -d
 
-# Run migrations
-docker-compose exec api alembic upgrade head
-
-# Seed demo data
-docker-compose exec api python -c "
-import asyncio
-import sys
-sys.path.insert(0, '/app')
-from scripts.seed import seed_database
-asyncio.run(seed_database())
-"
-
+# Migrations and seeding run automatically on startup!
 # Open http://localhost in your browser
 ```
+
+> **Note:** The API container automatically runs migrations and seeds demo data on startup via `start.sh`.
 
 ### Local Development
 
